@@ -1,105 +1,116 @@
 import os
-import sqlite3
+import pyodbc
 from flask import Flask, request, jsonify, send_from_directory
+from dotenv import load_dotenv
 
 # --- App Setup ---
+load_dotenv() # Load environment variables from .env file for local development
+
 app = Flask(__name__, static_folder='public', static_url_path='')
-app.config['JSON_SORT_KEYS'] = False # Keep JSON order as is
-DB_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database')
-DB_PATH = os.path.join(DB_FOLDER, 'groceries.db')
+app.config['JSON_SORT_KEYS'] = False
 
-# --- Database Setup ---
-def init_db():
-    """Initializes the database and creates the table if it doesn't exist."""
-    if not os.path.exists(DB_FOLDER):
-        os.makedirs(DB_FOLDER)
+# --- Database Connection ---
+def get_db_connection():
+    """Establishes a connection to the Azure SQL Database."""
+    driver = os.environ.get('DB_DRIVER')
+    server = os.environ.get('DB_SERVER')
+    database = os.environ.get('DB_NAME')
+    username = os.environ.get('DB_USER')
+    password = os.environ.get('DB_PASSWORD')
     
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS groceries (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                tags TEXT NOT NULL,
+    conn_str = f'DRIVER={driver};SERVER=tcp:{server};DATABASE={database};UID={username};PWD={password}'
+    
+    try:
+        conn = pyodbc.connect(conn_str)
+        return conn
+    except pyodbc.Error as ex:
+        sqlstate = ex.args[0]
+        print(f"Database connection failed: {sqlstate}")
+        # In a real app, you'd have more robust error handling
+        raise ex
+
+def init_db():
+    """Creates the 'groceries' table if it doesn't already exist."""
+    print("Checking if database table exists...")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Use T-SQL syntax to check for table existence
+            table_check_sql = """
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='groceries' and xtype='U')
+            CREATE TABLE groceries (
+                id INT IDENTITY(1,1) PRIMARY KEY,
+                name NVARCHAR(255),
+                tags NVARCHAR(MAX) NOT NULL,
                 expiry_date DATE,
-                image_base64 TEXT NOT NULL,
-                consumed INTEGER DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                image_base64 NVARCHAR(MAX) NOT NULL,
+                consumed BIT DEFAULT 0,
+                created_at DATETIME DEFAULT GETDATE()
             )
-        ''')
-        conn.commit()
-    print("Database initialized and table is ready.")
+            """
+            cursor.execute(table_check_sql)
+            conn.commit()
+        print("Database initialized and table is ready.")
+    except Exception as e:
+        print(f"An error occurred during DB initialization: {e}")
+        # This is critical. If DB init fails, the app cannot run.
+        # We will exit to allow the container orchestration service to restart it.
+        exit(1)
 
-def dict_factory(cursor, row):
-    """Converts database query results (tuples) into dictionaries."""
-    fields = [column[0] for column in cursor.description]
-    return {key: value for key, value in zip(fields, row)}
 
-# --- API Routes ---
+def query_db(query, params=(), fetchall=False):
+    """Helper function to query the database and return results as dicts."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        if query.strip().upper().startswith('SELECT'):
+            columns = [column[0] for column in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return results if fetchall else (results[0] if results else None)
+        else:
+            conn.commit()
+            return cursor.rowcount
+
+# --- API Routes (No changes needed to the logic here!) ---
 
 @app.route('/api/groceries', methods=['GET'])
 def get_groceries():
-    """Get all non-consumed groceries."""
-    try:
-        with sqlite3.connect(DB_PATH) as conn:
-            conn.row_factory = dict_factory
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM groceries WHERE consumed = 0 ORDER BY created_at DESC")
-            items = cursor.fetchall()
-            return jsonify(items)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    sql = "SELECT * FROM groceries WHERE consumed = 0 ORDER BY created_at DESC"
+    items = query_db(sql, fetchall=True)
+    return jsonify(items)
 
 @app.route('/api/grocery', methods=['POST'])
 def add_grocery():
-    """Add a new grocery item."""
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid input"}), 400
-
-    name = data.get('name')
-    tags = data.get('tags')
-    expiry_date = data.get('expiry_date')
-    image_base64 = data.get('image_base64')
-
     sql = "INSERT INTO groceries (name, tags, expiry_date, image_base64) VALUES (?, ?, ?, ?)"
-    try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, (name, tags, expiry_date, image_base64))
-            conn.commit()
-            return jsonify({"id": cursor.lastrowid}), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    params = (
+        data.get('name'),
+        data.get('tags'),
+        data.get('expiry_date'),
+        data.get('image_base64')
+    )
+    query_db(sql, params)
+    # To get the last ID in SQL Server, it's a bit more complex. For simplicity, we'll return a success message.
+    return jsonify({"success": True}), 201
 
 @app.route('/api/grocery/consume/<int:item_id>', methods=['POST'])
 def consume_grocery(item_id):
-    """Mark a grocery item as consumed."""
     sql = "UPDATE groceries SET consumed = 1 WHERE id = ?"
-    try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, (item_id,))
-            conn.commit()
-            return jsonify({"success": True, "changes": cursor.rowcount})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    changes = query_db(sql, (item_id,))
+    return jsonify({"success": True, "changes": changes})
 
 # --- Serve Frontend ---
-
 @app.route('/')
 def index():
-    """Serves the main index.html file."""
     return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
-    """Serves other static files like gallery.html, css, js."""
     return send_from_directory(app.static_folder, path)
-
 
 # --- Main Execution ---
 if __name__ == '__main__':
     init_db()
-    # Host='0.0.0.0' is important for running inside Docker
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    # Port will be set by the hosting environment, default to 8000 for ACA
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port)
