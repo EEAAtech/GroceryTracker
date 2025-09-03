@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main  # Change if using a different default branch
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
 
 env:
   DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/grocerytracker:latest
