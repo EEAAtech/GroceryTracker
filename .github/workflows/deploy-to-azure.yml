@@ -42,8 +42,8 @@ jobs:
     - name: Deploy to Azure Container Apps
       uses: azure/container-apps-deploy-action@v1
       with:
-        appName: "grocery-tracker-app"
-        resourceGroupName: "GroceryTrackerRG"
+        containerAppName: "grocery-tracker-app"
+        resourceGroup: "GroceryTrackerRG"
         imageToDeploy: docker.io/eadoc/grocery-tracker:latest # IMPORTANT: Replace username
      # run: |
      #   az containerapp update \
