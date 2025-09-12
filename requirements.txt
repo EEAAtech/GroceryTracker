@@ -1,5 +1,3 @@
 Flask==3.0.3
 pyodbc==5.1.0
 python-dotenv==1.0.1
-
-PS: for me personally it has been a great learning to deploy to an Azure Container App
