@@ -102,6 +102,7 @@ def consume_grocery(item_id):
 # --- Serve Frontend ---
 @app.route('/')
 def index():
+    print("Request received for index page.") # Add logging
     return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/<path:path>')
@@ -111,6 +112,12 @@ def serve_static(path):
 # --- Main Execution ---
 if __name__ == '__main__':
     init_db()
+
+     # Hard-code the port to 8000 to match our --target-port configuration.
+    port = 8000
+    print(f"--- App starting, preparing to listen on host 0.0.0.0 and port {port} ---")
+    
+
     # Port will be set by the hosting environment, default to 8000 for ACA
-    port = int(os.environ.get('PORT', 8000))
+    # port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port)
