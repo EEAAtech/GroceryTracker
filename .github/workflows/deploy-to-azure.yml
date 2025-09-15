@@ -26,18 +26,13 @@ jobs:
         push: true
         tags: eadoc/grocery-tracker:latest
 
-      # run: |
-      #  docker build -t $DOCKER_IMAGE .
-      #  docker push $DOCKER_IMAGE
+     
 
     - name: Azure Login
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-       # client-id: ${{ secrets.AZURE_CLIENT_ID }}
-       # tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-       # subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-       # auth-type: federated
+       
 
     - name: Deploy to Azure Container Apps
       uses: azure/container-apps-deploy-action@v1
@@ -45,8 +40,4 @@ jobs:
         containerAppName: "grocery-tracker-app"
         resourceGroup: "GroceryTrackerRG"
         imageToDeploy: docker.io/eadoc/grocery-tracker:latest # IMPORTANT: Replace username
-     # run: |
-     #   az containerapp update \
-     #     --name ${{ secrets.AZURE_CONTAINERAPP_NAME }} \
-     #     --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-     #     --image $DOCKER_IMAGE
+     

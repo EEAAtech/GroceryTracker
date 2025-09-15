@@ -1,0 +1,14 @@
+[
+  {
+    "tag": "Raw",
+    "subtags": ["NonVeg", "Veg", "DalCurry", "Starch", "Snack"]
+  },
+  {
+    "tag": "Ready",
+    "subtags": ["NonVeg", "Veg", "DalCurry", "Sweet", "Jam", "Pickle", "DryFrt", "Snack"]
+  },
+  {
+    "tag": "Quick",
+    "subtags": ["NonVeg", "Veg", "DalCury", "Sweet", "Soup", "Starch", "Snack"]
+  }
+]

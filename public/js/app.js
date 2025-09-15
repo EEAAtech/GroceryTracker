@@ -1,41 +1,114 @@
 $(document).ready(function() {
     let resizedImage = null;
+    let tagsData = [];
+    let selectedTag = null;
+    let selectedSubtag = null;
+    let quantity = 1;
 
-    // 1. Load Tags from CSV
+    const $tagsContainer = $('#tagsContainer');
+    const $subtagsContainer = $('#subtagsContainer');
+    const $subtagsHeader = $('#subtagsHeader');
+
+    // 1. Load Tag/Subtag data from JSON
     $.ajax({
-        url: 'tags.csv',
-        dataType: 'text',
-    }).done(function(data) {
-        const tags = data.split(',');
-        const $tagsContainer = $('#tagsContainer');
-        tags.forEach(tag => {
-            if (tag.trim()) {
-                // Using Bootstrap buttons for tags
-                const $button = $('<button></button>')
-                    .addClass('btn btn-outline-info')
-                    .text(tag.trim())
-                    .attr('data-tag', tag.trim());
-                $tagsContainer.append($button);
-            }
-        });
+        url: 'tags.json',
+        dataType: 'json',
+        success: function(data) {
+            // This block runs if the file is loaded and parsed successfully
+            console.log("app.js: Successfully loaded and parsed tags.json", data);
+            tagsData = data;
+            renderTags();
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            // This block runs if anything goes wrong
+            console.error("app.js: Error loading tags.json!");
+            console.error("Status: " + textStatus);
+            console.error("Error Thrown: " + errorThrown);
+            console.error("Response Text:", jqXHR.responseText);
+            $('#tagsContainer').html('<div class="alert alert-danger">Error: Could not load categories. Please check the tags.json file and refresh.</div>');
+        }
     });
 
-    // Toggle active state for tags and date buttons
-    $(document).on('click', '#tagsContainer .btn, .date-selector .btn', function() {
-        // For date selectors, make them behave like radio buttons
-        if ($(this).parent().hasClass('date-selector')) {
-            $(this).siblings().removeClass('active');
+    function renderTags() {
+        $tagsContainer.empty();
+        tagsData.forEach(item => {
+            const $button = $('<button></button>')
+                .addClass('btn btn-outline-info')
+                .text(item.tag)
+                .data('tag', item.tag);
+            $tagsContainer.append($button);
+        });
+    }
+
+    function renderSubtags(tagName) {
+        const tagObject = tagsData.find(t => t.tag === tagName);
+        if (!tagObject) return;
+
+        $subtagsContainer.empty();
+        tagObject.subtags.forEach(subtag => {
+            const $button = $('<button></button>')
+                .addClass('btn btn-outline-light')
+                .text(subtag)
+                .data('subtag', subtag);
+            $subtagsContainer.append($button);
+        });
+    }
+
+    // --- Event Handlers ---
+
+    // Click on a main tag
+    $tagsContainer.on('click', '.btn', function() {
+        selectedTag = $(this).data('tag');
+        selectedSubtag = null; // Reset subtag selection
+
+        $('#selectedTagText').text(selectedTag);
+        renderSubtags(selectedTag);
+
+        $tagsContainer.hide();
+        $subtagsHeader.show();
+        $subtagsContainer.show();
+    });
+
+    // Click "Back" to return to main tags
+    $('#backToTagsBtn').on('click', function() {
+        selectedTag = null;
+        selectedSubtag = null;
+        
+        $subtagsContainer.hide().empty();
+        $subtagsHeader.hide();
+        $tagsContainer.show();
+    });
+
+    // Click on a subtag (single selection)
+    $subtagsContainer.on('click', '.btn', function() {
+        selectedSubtag = $(this).data('subtag');
+        $(this).addClass('active').siblings().removeClass('active');
+    });
+
+    // Quantity buttons
+    $('#btnIncrease').on('click', function() {
+        quantity++;
+        $('#quantityDisplay').text(quantity);
+    });
+
+    $('#btnDecrease').on('click', function() {
+        if (quantity > 1) {
+            quantity--;
+            $('#quantityDisplay').text(quantity);
         }
+    });
+
+    // --- Date Selectors & Image Handling  ---
+
+    $(document).on('click', '.date-selector .btn', function() {
+        $(this).siblings().removeClass('active');
         $(this).toggleClass('active');
     });
-
-    // 2. Populate Date Selectors
     const now = new Date();
     const currentYear = now.getFullYear();
     const $daySelector = $('#daySelector');
     const $monthSelector = $('#monthSelector');
     const $yearSelector = $('#yearSelector');
-
     for (let i = 1; i <= 31; i++) $daySelector.append(`<button class="btn btn-sm btn-outline-warning">${i}</button>`);
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     monthNames.forEach((month, index) => {
@@ -44,33 +117,24 @@ $(document).ready(function() {
     for (let i = 0; i < 4; i++) {
         const year = currentYear + i;
         const $btn = $(`<button class="btn btn-sm btn-outline-danger">${year}</button>`);
-        if (i === 0) $btn.addClass('active'); // Default to current year
+        if (i === 0) $btn.addClass('active');
         $yearSelector.append($btn);
     }
-    
-    // 3. Handle Image Upload and Resizing
     $('#imageInput').on('change', function(event) {
         const file = event.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                
-                const targetWidth = 300; // Downsize to 100px width
+                const targetWidth = 100;
                 const scaleFactor = targetWidth / img.width;
                 canvas.width = targetWidth;
                 canvas.height = img.height * scaleFactor;
-
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                
-                // Get the resized image as a base64 string
                 resizedImage = canvas.toDataURL('image/jpeg');
-                
-                // Show preview
                 $('#imagePreview').attr('src', resizedImage).show();
             }
             img.src = e.target.result;
@@ -78,27 +142,11 @@ $(document).ready(function() {
         reader.readAsDataURL(file);
     });
 
-    // 4. Handle Save Button Click
-    $('#saveButton').on('click', function() {
-        // Collect data
-        const itemName = $('#itemName').val().trim();
-        const selectedTags = $('#tagsContainer .btn.active').map(function() {
-            return $(this).data('tag');
-        }).get();
-
-        // Construct expiry date
-        const day = $('#daySelector .btn.active').text();
-        const month = $('#monthSelector .btn.active').data('month');
-        const year = $('#yearSelector .btn.active').text();
-        let expiryDate = null;
-        if (day && month && year) {
-            // Format as YYYY-MM-DD for proper sorting
-            expiryDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        }
-
+    // --- UPDATED SAVE LOGIC ---
+    $('#saveButton').on('click', async function() {
         // Validation
-        if (selectedTags.length === 0) {
-            alert('Please select at least one tag.');
+        if (!selectedTag || !selectedSubtag) {
+            alert('Please select a category and sub-category.');
             return;
         }
         if (!resizedImage) {
@@ -106,31 +154,46 @@ $(document).ready(function() {
             return;
         }
 
-        // Create data payload
+        $(this).prop('disabled', true).text('Saving...');
+
+        // Collect data
+        const itemName = $('#itemName').val().trim();
+        const day = $('#daySelector .btn.active').text();
+        const month = $('#monthSelector .btn.active').data('month');
+        const year = $('#yearSelector .btn.active').text();
+        let expiryDate = null;
+        if (day && month && year) {
+            expiryDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+        
+        // Prepare the base grocery item object
         const groceryItem = {
             name: itemName,
-            tags: selectedTags.join(','), // Store as comma-separated string
+            tags: `${selectedTag},${selectedSubtag}`, // Store as "Tag,Subtag"
             expiry_date: expiryDate,
             image_base64: resizedImage,
         };
-        
-        // Send data to backend API
-        fetch('/api/grocery', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(groceryItem),
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert('Item saved successfully!');
-            // Reset form
+
+        // Create an array of save promises
+        const savePromises = [];
+        for (let i = 0; i < quantity; i++) {
+            const savePromise = fetch('/api/grocery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(groceryItem),
+            });
+            savePromises.push(savePromise);
+        }
+
+        try {
+            // Wait for all save operations to complete
+            await Promise.all(savePromises);
+            alert(`Successfully saved ${quantity} item(s)!`);
             window.location.reload();
-        })
-        .catch((error) => {
+        } catch (error) {
             console.error('Error:', error);
-            alert('Error saving item.');
-        });
+            alert('An error occurred while saving.');
+            $(this).prop('disabled', false).text('Save Item');
+        }
     });
 });

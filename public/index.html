@@ -13,31 +13,35 @@
         <h3 class="text-center mb-4">Add a New Grocery Item</h3>
 
         <div class="mb-3">
-            <label for="itemName" class="form-label">1. Item Name (Optional)</label>
-            <input type="text" class="form-control" id="itemName" placeholder="e.g., Organic Apples">
+            <label class="form-label">1. Category (Select one)</label>
+            <div id="subtagsHeader" class="d-flex justify-content-between align-items-center mb-2" style="display: none;">
+                <small class="text-muted">Selected Tag: <b id="selectedTagText"></b></small>
+                <button id="backToTagsBtn" class="btn btn-sm btn-outline-secondary">Back</button>
+            </div>
+            <div id="tagsContainer" class="d-flex flex-wrap gap-2">
+                </div>
+            <div id="subtagsContainer" class="d-flex flex-wrap gap-2" style="display: none;">
+                </div>
         </div>
 
         <div class="mb-3">
-            <label class="form-label">2. Tags (Select at least one)</label>
-            <div id="tagsContainer" class="d-flex flex-wrap gap-2">
+            <label for="itemName" class="form-label">2. Item Name (Optional)</label>
+            <div class="d-flex align-items-center gap-3">
+                <input type="text" class="form-control" id="itemName" placeholder="e.g., 70% Choc.">
+                <div class="d-flex align-items-center gap-2 bg-secondary p-2 rounded">
+                    <button id="btnDecrease" class="btn btn-sm btn-light">-</button>
+                    <span id="quantityDisplay" class="fw-bold h5 mb-0 mx-2">1</span>
+                    <button id="btnIncrease" class="btn btn-sm btn-light">+</button>
                 </div>
+            </div>
         </div>
 
         <div class="mb-3">
             <label class="form-label">3. Expiry Date (Optional)</label>
             <div class="row g-2">
-                <div class="col-12">
-                    <div id="daySelector" class="d-flex flex-wrap gap-1 date-selector">
-                        </div>
-                </div>
-                 <div class="col-12 mt-2">
-                    <div id="monthSelector" class="d-flex flex-wrap gap-1 date-selector">
-                        </div>
-                </div>
-                <div class="col-12 mt-2">
-                    <div id="yearSelector" class="d-flex flex-wrap gap-1 date-selector">
-                        </div>
-                </div>
+                <div class="col-12"><div id="daySelector" class="d-flex flex-wrap gap-1 date-selector"></div></div>
+                <div class="col-12 mt-2"><div id="monthSelector" class="d-flex flex-wrap gap-1 date-selector"></div></div>
+                <div class="col-12 mt-2"><div id="yearSelector" class="d-flex flex-wrap gap-1 date-selector"></div></div>
             </div>
         </div>
         
@@ -54,7 +58,6 @@
         <div class="text-center mt-3">
              <a href="/gallery.html">View Grocery Gallery</a>
         </div>
-
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
