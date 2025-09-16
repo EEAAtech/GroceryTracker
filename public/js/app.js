@@ -7,20 +7,18 @@ $(document).ready(function() {
 
     const $tagsContainer = $('#tagsContainer');
     const $subtagsContainer = $('#subtagsContainer');
-    const $subtagsHeader = $('#subtagsHeader');
+    // REMOVED: The $subtagsHeader variable is no longer needed.
 
     // 1. Load Tag/Subtag data from JSON
     $.ajax({
         url: 'tags.json',
         dataType: 'json',
         success: function(data) {
-            // This block runs if the file is loaded and parsed successfully
             console.log("app.js: Successfully loaded and parsed tags.json", data);
             tagsData = data;
             renderTags();
         },
         error: function(jqXHR, textStatus, errorThrown) {
-            // This block runs if anything goes wrong
             console.error("app.js: Error loading tags.json!");
             console.error("Status: " + textStatus);
             console.error("Error Thrown: " + errorThrown);
@@ -40,11 +38,19 @@ $(document).ready(function() {
         });
     }
 
+    // --- UPDATED renderSubtags function ---
     function renderSubtags(tagName) {
         const tagObject = tagsData.find(t => t.tag === tagName);
         if (!tagObject) return;
 
-        $subtagsContainer.empty();
+        $subtagsContainer.empty(); // Clear previous content
+
+        // 1. Create and prepend the selected tag label
+        const $label = $('<div class="w-100 mb-2 text-muted">Tag: <b class="text-light"></b></div>');
+        $label.find('b').text(tagName);
+        $subtagsContainer.prepend($label);
+
+        // 2. Render the subtag buttons
         tagObject.subtags.forEach(subtag => {
             const $button = $('<button></button>')
                 .addClass('btn btn-outline-light')
@@ -52,6 +58,13 @@ $(document).ready(function() {
                 .data('subtag', subtag);
             $subtagsContainer.append($button);
         });
+
+        // 3. Create and append the "Back" button with a different style
+        const $backButton = $('<button></button>')
+            .addClass('btn btn-secondary ms-2') // Use 'btn-secondary' for a different look
+            .text('Back')
+            .attr('id', 'backToTagsBtn'); // Assign the ID for the event handler
+        $subtagsContainer.append($backButton);
     }
 
     // --- Event Handlers ---
@@ -61,26 +74,25 @@ $(document).ready(function() {
         selectedTag = $(this).data('tag');
         selectedSubtag = null; // Reset subtag selection
 
-        $('#selectedTagText').text(selectedTag);
+        // UPDATED: No longer need to manage the header separately
         renderSubtags(selectedTag);
 
         $tagsContainer.hide();
-        $subtagsHeader.show();
         $subtagsContainer.show();
     });
 
-    // Click "Back" to return to main tags
-    $('#backToTagsBtn').on('click', function() {
+    // UPDATED: Use a "delegated" event handler for the dynamically created back button
+    $subtagsContainer.on('click', '#backToTagsBtn', function() {
         selectedTag = null;
         selectedSubtag = null;
         
         $subtagsContainer.hide().empty();
-        $subtagsHeader.hide();
+        // REMOVED: No header to hide
         $tagsContainer.show();
     });
 
     // Click on a subtag (single selection)
-    $subtagsContainer.on('click', '.btn', function() {
+    $subtagsContainer.on('click', '.btn:not(#backToTagsBtn)', function() { // Ensure we don't select the back button
         selectedSubtag = $(this).data('subtag');
         $(this).addClass('active').siblings().removeClass('active');
     });
@@ -98,8 +110,7 @@ $(document).ready(function() {
         }
     });
 
-    // --- Date Selectors & Image Handling  ---
-
+    // --- Date Selectors & Image Handling (No Changes) ---
     $(document).on('click', '.date-selector .btn', function() {
         $(this).siblings().removeClass('active');
         $(this).toggleClass('active');
@@ -142,9 +153,8 @@ $(document).ready(function() {
         reader.readAsDataURL(file);
     });
 
-    // --- UPDATED SAVE LOGIC ---
+    // --- SAVE LOGIC (No Changes) ---
     $('#saveButton').on('click', async function() {
-        // Validation
         if (!selectedTag || !selectedSubtag) {
             alert('Please select a category and sub-category.');
             return;
@@ -153,10 +163,7 @@ $(document).ready(function() {
             alert('Please upload an image.');
             return;
         }
-
         $(this).prop('disabled', true).text('Saving...');
-
-        // Collect data
         const itemName = $('#itemName').val().trim();
         const day = $('#daySelector .btn.active').text();
         const month = $('#monthSelector .btn.active').data('month');
@@ -165,16 +172,12 @@ $(document).ready(function() {
         if (day && month && year) {
             expiryDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         }
-        
-        // Prepare the base grocery item object
         const groceryItem = {
             name: itemName,
-            tags: `${selectedTag},${selectedSubtag}`, // Store as "Tag,Subtag"
+            tags: `${selectedTag},${selectedSubtag}`,
             expiry_date: expiryDate,
             image_base64: resizedImage,
         };
-
-        // Create an array of save promises
         const savePromises = [];
         for (let i = 0; i < quantity; i++) {
             const savePromise = fetch('/api/grocery', {
@@ -184,9 +187,7 @@ $(document).ready(function() {
             });
             savePromises.push(savePromise);
         }
-
         try {
-            // Wait for all save operations to complete
             await Promise.all(savePromises);
             alert(`Successfully saved ${quantity} item(s)!`);
             window.location.reload();

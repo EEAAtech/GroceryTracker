@@ -1,5 +1,5 @@
 $(document).ready(function() {
-    let allGroceries = [];
+    
     let tagsData = [];
     let selectedFilterTag = null;
     let selectedFilterSubtag = null;
@@ -7,54 +7,24 @@ $(document).ready(function() {
     const imageModal = new bootstrap.Modal($('#imageModal')[0]);
     const $filterTagsContainer = $('#filterTagsContainer');
     const $filterSubtagsContainer = $('#filterSubtagsContainer');
-    const $filterSubtagsHeader = $('#filterSubtagsHeader');
 
-    // 1. Fetch grocery items from the API
-    function loadGroceries() {
-        fetch('/api/groceries')
-            .then(response => response.json())
-            .then(data => {
-                const today = new Date().toISOString().split('T')[0];
-                data.sort((a, b) => {
-                    // Sorting logic remains the same
-                    const aIsNull = a.expiry_date === null;
-                    const bIsNull = b.expiry_date === null;
-                    const aIsPast = a.expiry_date < today;
-                    const bIsPast = b.expiry_date < today;
-                    if (aIsNull && !bIsNull) return -1;
-                    if (!aIsNull && bIsNull) return 1;
-                    if (aIsPast && !bIsPast) return 1;
-                    if (!aIsPast && bIsPast) return -1;
-                    return new Date(a.expiry_date) - new Date(b.expiry_date);
-                });
-                allGroceries = data;
-                renderGallery(allGroceries);
-            });
-    }
-
-    // 2. Load Tag/Subtag data for filtering
+    // Load Tag/Subtag data for building the filter controls (this stays the same)
     $.ajax({
         url: 'tags.json',
         dataType: 'json',
         success: function(data) {
-            // This block runs if the file is loaded and parsed successfully
             console.log("gallery.js: Successfully loaded and parsed tags.json", data);
             tagsData = data;
             renderFilterTags();
         },
         error: function(jqXHR, textStatus, errorThrown) {
-            // This block runs if anything goes wrong
-            console.error("gallery.js: Error loading tags.json!");
-            console.error("Status: " + textStatus);
-            console.error("Error Thrown: " + errorThrown);
-            console.error("Response Text:", jqXHR.responseText);
-            $('#tagsContainer').html('<div class="alert alert-danger">Error: Could not load categories. Please check the tags.json file and refresh.</div>');
+            console.error("gallery.js: Error loading tags.json!", errorThrown);
+            $('#filterTagsContainer').html('<div class="alert alert-danger">Error: Could not load categories.</div>');
         }
     });
 
     function renderFilterTags() {
         $filterTagsContainer.empty();
-        // Add an "All" button
         $filterTagsContainer.append('<button class="btn btn-sm btn-info active" data-tag="All">All</button>');
         tagsData.forEach(item => {
             const $button = $('<button></button>')
@@ -70,6 +40,9 @@ $(document).ready(function() {
         if (!tagObject) return;
 
         $filterSubtagsContainer.empty();
+        const $label = $('<div class="w-100 mb-2 text-muted">Filtering by Tag: <b class="text-light"></b></div>');
+        $label.find('b').text(tagName);
+        $filterSubtagsContainer.prepend($label);
         $filterSubtagsContainer.append('<button class="btn btn-sm btn-light active" data-subtag="All">All Sub-Categories</button>');
         tagObject.subtags.forEach(subtag => {
             const $button = $('<button></button>')
@@ -78,65 +51,78 @@ $(document).ready(function() {
                 .data('subtag', subtag);
             $filterSubtagsContainer.append($button);
         });
+        const $backButton = $('<button></button>')
+            .addClass('btn btn-sm btn-secondary ms-2')
+            .text('Back to Tags')
+            .attr('id', 'backToFilterTagsBtn');
+        $filterSubtagsContainer.append($backButton);
     }
 
     // --- Filter Event Handlers ---
-
     $filterTagsContainer.on('click', '.btn', function() {
         selectedFilterTag = $(this).data('tag');
         $(this).addClass('active').siblings().removeClass('active');
         
         if (selectedFilterTag === 'All') {
-            $('#backToFilterTagsBtn').click(); // Go back to main view and filter all
+            selectedFilterTag = null;
+            selectedFilterSubtag = null;
+            $filterSubtagsContainer.hide().empty();
+            $filterTagsContainer.show();
         } else {
-            $('#selectedFilterTagText').text(selectedFilterTag);
+            selectedFilterSubtag = 'All';
             renderFilterSubtags(selectedFilterTag);
             $filterTagsContainer.hide();
-            $filterSubtagsHeader.show();
             $filterSubtagsContainer.show();
         }
         applyFilters();
     });
 
-    $('#backToFilterTagsBtn').on('click', function() {
+    $filterSubtagsContainer.on('click', '#backToFilterTagsBtn', function() {
         selectedFilterTag = null;
         selectedFilterSubtag = null;
         $filterSubtagsContainer.hide().empty();
-        $filterSubtagsHeader.hide();
         $filterTagsContainer.show();
         $filterTagsContainer.find('[data-tag="All"]').addClass('active').siblings().removeClass('active');
         applyFilters();
     });
 
-    $filterSubtagsContainer.on('click', '.btn', function() {
+    $filterSubtagsContainer.on('click', '.btn:not(#backToFilterTagsBtn)', function() {
         selectedFilterSubtag = $(this).data('subtag');
         $(this).addClass('active').siblings().removeClass('active');
         applyFilters();
     });
 
+    // --- UPDATED applyFilters function ---
     function applyFilters() {
-        let filteredGroceries = allGroceries;
-
-        if (selectedFilterTag && selectedFilterTag !== 'All') {
-            filteredGroceries = filteredGroceries.filter(item => {
-                const itemTag = item.tags.split(',')[0];
-                return itemTag === selectedFilterTag;
-            });
-
-            if (selectedFilterSubtag && selectedFilterSubtag !== 'All') {
-                filteredGroceries = filteredGroceries.filter(item => {
-                    const itemSubtag = item.tags.split(',')[1];
-                    return itemSubtag === selectedFilterSubtag;
-                });
-            }
+        // Only fetch data if a specific subtag has been selected.
+        if (!selectedFilterTag || selectedFilterTag === 'All' || !selectedFilterSubtag || selectedFilterSubtag === 'All') {
+            renderGallery([]); // Clear the gallery if no specific subtag is chosen
+            return;
         }
-        renderGallery(filteredGroceries);
+
+        // Show a loading indicator
+        $('#galleryContainer').html('<p class="text-center">Loading items...</p>');
+
+        const url = `/api/groceries?tag=${encodeURIComponent(selectedFilterTag)}&subtag=${encodeURIComponent(selectedFilterSubtag)}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(filteredData => {
+                renderGallery(filteredData);
+            })
+            .catch(error => {
+                console.error('Error fetching filtered grocery data:', error);
+                $('#galleryContainer').html('<p class="text-center text-danger">Failed to load items.</p>');
+            });
     }
     
-    // --- Render Gallery & Other Logic (No changes here) ---
+    // --- Render Gallery & Other Logic (No other changes needed below) ---
     function renderGallery(items) {
         const $container = $('#galleryContainer');
         $container.empty();
+        if (items.length === 0) {
+            $container.html('<p class="text-center text-muted">No items found for this sub-category.</p>');
+        }
         items.forEach(item => {
             const tagsHtml = `<span class="badge bg-secondary">${item.tags.replace(/,/g, ' / ')}</span>`;
             const expiryHtml = item.expiry_date ? `<p class="card-text"><small class="text-muted">Expires: ${item.expiry_date}</small></p>` : '';
@@ -170,5 +156,5 @@ $(document).ready(function() {
         $('#fullscreenImage').attr('src', src);
         imageModal.show();
     });
-    loadGroceries();
+    
 });
