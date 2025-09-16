@@ -5,7 +5,7 @@
   },
   {
     "tag": "Ready",
-    "subtags": ["NonVeg", "Veg", "DalCurry", "Sweet", "Jam", "Pickle", "Friut", "DryFrt", "Snack"]
+    "subtags": ["NonVeg", "Veg", "DalCurry", "Sweet", "Jam", "Pickle", "Fruit", "DryFrt", "Snack"]
   },
   {
     "tag": "Quick",
