@@ -25,7 +25,7 @@ $(document).ready(function() {
 
     function renderFilterTags() {
         $filterTagsContainer.empty();
-        $filterTagsContainer.append('<button class="btn btn-sm btn-info active" data-tag="All">All</button>');
+        
         tagsData.forEach(item => {
             const $button = $('<button></button>')
                 .addClass('btn btn-sm btn-outline-info')
@@ -40,10 +40,7 @@ $(document).ready(function() {
         if (!tagObject) return;
 
         $filterSubtagsContainer.empty();
-        const $label = $('<div class="w-100 mb-2 text-muted">Filtering by Tag: <b class="text-light"></b></div>');
-        $label.find('b').text(tagName);
-        $filterSubtagsContainer.prepend($label);
-        $filterSubtagsContainer.append('<button class="btn btn-sm btn-light active" data-subtag="All">All Sub-Categories</button>');
+        
         tagObject.subtags.forEach(subtag => {
             const $button = $('<button></button>')
                 .addClass('btn btn-sm btn-outline-light')
@@ -51,42 +48,21 @@ $(document).ready(function() {
                 .data('subtag', subtag);
             $filterSubtagsContainer.append($button);
         });
-        const $backButton = $('<button></button>')
-            .addClass('btn btn-sm btn-secondary ms-2')
-            .text('Back to Tags')
-            .attr('id', 'backToFilterTagsBtn');
-        $filterSubtagsContainer.append($backButton);
+        
     }
 
     // --- Filter Event Handlers ---
     $filterTagsContainer.on('click', '.btn', function() {
+        selectedFilterSubtag = null;
         selectedFilterTag = $(this).data('tag');
         $(this).addClass('active').siblings().removeClass('active');
         
-        if (selectedFilterTag === 'All') {
-            selectedFilterTag = null;
-            selectedFilterSubtag = null;
-            $filterSubtagsContainer.hide().empty();
-            $filterTagsContainer.show();
-        } else {
-            selectedFilterSubtag = 'All';
-            renderFilterSubtags(selectedFilterTag);
-            $filterTagsContainer.hide();
-            $filterSubtagsContainer.show();
-        }
+        renderFilterSubtags(selectedFilterTag);
+        $filterSubtagsContainer.show();
         applyFilters();
     });
 
-    $filterSubtagsContainer.on('click', '#backToFilterTagsBtn', function() {
-        selectedFilterTag = null;
-        selectedFilterSubtag = null;
-        $filterSubtagsContainer.hide().empty();
-        $filterTagsContainer.show();
-        $filterTagsContainer.find('[data-tag="All"]').addClass('active').siblings().removeClass('active');
-        applyFilters();
-    });
-
-    $filterSubtagsContainer.on('click', '.btn:not(#backToFilterTagsBtn)', function() {
+    $filterSubtagsContainer.on('click', '.btn', function() {
         selectedFilterSubtag = $(this).data('subtag');
         $(this).addClass('active').siblings().removeClass('active');
         applyFilters();
@@ -95,7 +71,7 @@ $(document).ready(function() {
     // --- UPDATED applyFilters function ---
     function applyFilters() {
         // Only fetch data if a specific subtag has been selected.
-        if (!selectedFilterTag || selectedFilterTag === 'All' || !selectedFilterSubtag || selectedFilterSubtag === 'All') {
+        if (!selectedFilterTag || !selectedFilterSubtag) {
             renderGallery([]); // Clear the gallery if no specific subtag is chosen
             return;
         }

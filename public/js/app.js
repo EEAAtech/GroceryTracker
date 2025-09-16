@@ -45,12 +45,8 @@ $(document).ready(function() {
 
         $subtagsContainer.empty(); // Clear previous content
 
-        // 1. Create and prepend the selected tag label
-        const $label = $('<div class="w-100 mb-2 text-muted">Tag: <b class="text-light"></b></div>');
-        $label.find('b').text(tagName);
-        $subtagsContainer.prepend($label);
-
-        // 2. Render the subtag buttons
+    
+        //Render the subtag buttons
         tagObject.subtags.forEach(subtag => {
             const $button = $('<button></button>')
                 .addClass('btn btn-outline-light')
@@ -59,12 +55,7 @@ $(document).ready(function() {
             $subtagsContainer.append($button);
         });
 
-        // 3. Create and append the "Back" button with a different style
-        const $backButton = $('<button></button>')
-            .addClass('btn btn-secondary ms-2') // Use 'btn-secondary' for a different look
-            .text('Back')
-            .attr('id', 'backToTagsBtn'); // Assign the ID for the event handler
-        $subtagsContainer.append($backButton);
+       
     }
 
     // --- Event Handlers ---
@@ -76,19 +67,9 @@ $(document).ready(function() {
 
         // UPDATED: No longer need to manage the header separately
         renderSubtags(selectedTag);
-
-        $tagsContainer.hide();
+        $(this).addClass('active').siblings().removeClass('active');
+    
         $subtagsContainer.show();
-    });
-
-    // UPDATED: Use a "delegated" event handler for the dynamically created back button
-    $subtagsContainer.on('click', '#backToTagsBtn', function() {
-        selectedTag = null;
-        selectedSubtag = null;
-        
-        $subtagsContainer.hide().empty();
-        // REMOVED: No header to hide
-        $tagsContainer.show();
     });
 
     // Click on a subtag (single selection)

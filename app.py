@@ -71,13 +71,43 @@ def query_db(query, params=(), fetchall=False):
             conn.commit()
             return cursor.rowcount
 
-# --- API Routes (No changes needed to the logic here!) ---
-
 @app.route('/api/groceries', methods=['GET'])
 def get_groceries():
-    sql = "SELECT * FROM groceries WHERE consumed = 0 ORDER BY created_at DESC"
-    items = query_db(sql, fetchall=True)
-    return jsonify(items)
+    """
+    Get grocery items. If tag and subtag are provided as query params,
+    it returns filtered and sorted data. Otherwise, returns an empty list.
+    """
+    tag = request.args.get('tag')
+    subtag = request.args.get('subtag')
+
+    # If no specific filter is provided, return an empty list as requested.
+    if not tag or not subtag:
+        return jsonify([])
+
+    # A filter is provided, so build the query.
+    try:
+        # The 'tags' column stores data like "Fruit,Apple"
+        tags_filter = f"{tag},{subtag}"
+
+        # SQL to get unconsumed items for a specific tag set,
+        # ordered with NULL expiry dates first, then by the nearest expiry date.
+        sql = """
+            SELECT * FROM groceries 
+            WHERE consumed = 0 AND tags = ?
+            ORDER BY expiry_date ASC
+        """
+        
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (tags_filter,))
+            columns = [column[0] for column in cursor.description]
+            items = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return jsonify(items)
+
+            
+    except Exception as e:
+        print(f"Error fetching filtered groceries: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/grocery', methods=['POST'])
 def add_grocery():
