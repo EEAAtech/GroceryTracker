@@ -1,5 +1,4 @@
 $(document).ready(function() {
-    
     let tagsData = [];
     let selectedFilterTag = null;
     let selectedFilterSubtag = null;
@@ -22,17 +21,14 @@ $(document).ready(function() {
         }
     }
 
-    // Load Tag/Subtag data for building the filter controls (this stays the same)
     $.ajax({
         url: 'tags.json',
         dataType: 'json',
         success: function(data) {
-            console.log("gallery.js: Successfully loaded and parsed tags.json", data);
             tagsData = data;
             renderFilterTags();
         },
         error: function(jqXHR, textStatus, errorThrown) {
-            console.error("gallery.js: Error loading tags.json!", errorThrown);
             $('#filterTagsContainer').html('<div class="alert alert-danger">Error: Could not load categories.</div>');
         }
     });
@@ -41,10 +37,7 @@ $(document).ready(function() {
         $filterTagsContainer.empty();
         
         tagsData.forEach(item => {
-            const $button = $('<button></button>')
-                .addClass('btn btn-sm btn-outline-info')
-                .text(item.tag)
-                .data('tag', item.tag);
+            const $button = $('<button></button>').addClass('btn btn-sm btn-outline-info').text(item.tag).data('tag', item.tag);
             $filterTagsContainer.append($button);
         });
     }
@@ -71,7 +64,6 @@ $(document).ready(function() {
         
     }
 
-
     // --- Event Handlers ---
 
     // --- Filter Event Handlers ---
@@ -86,13 +78,6 @@ $(document).ready(function() {
         applyFilters();
     });
 
-    $filterSubtagsContainer.on('click', '.btn:not(#backToTagsBtn)', function() {
-        selectedFilterSubtag = $(this).data('subtag');
-        $(this).addClass('active').siblings().removeClass('active');
-        applyFilters();
-    });
-
-    // Use a "delegated" event handler for the dynamically created back button
     $filterSubtagsContainer.on('click', '#backToTagsBtn', function() {
         selectedFilterTag = null;
         selectedFilterSubtag = null;
@@ -102,39 +87,60 @@ $(document).ready(function() {
         $filterTagsContainer.find('.btn').removeClass('active');
     });
 
+    $filterSubtagsContainer.on('click', '.btn:not(#backToFilterTagsBtn)', function() {
+        selectedFilterSubtag = $(this).data('subtag');
+        $(this).addClass('active').siblings().removeClass('active');
+        applyFilters();
+    });
+
+    // --- NEW: Event listener for date inputs ---
+    $fromDate.on('change', applyFilters);
+    $toDate.on('change', applyFilters);
+
     function applyFilters() {
-        // Only fetch data if a specific subtag has been selected.
-        if (!selectedFilterTag || !selectedFilterSubtag) {
-            renderGallery([]); // Clear the gallery if no specific subtag is chosen
+        if (!selectedFilterTag || !selectedFilterSubtag ) {
+            renderGallery([]);
             return;
         }
 
-        // Show a loading indicator
         $('#galleryContainer').html('<p class="text-center">Loading items...</p>');
-
-        const url = `/api/groceries?tag=${encodeURIComponent(selectedFilterTag)}&subtag=${encodeURIComponent(selectedFilterSubtag)}`;
         
+        // --- KEY CHANGE: Reading date values and adding to URL ---
+        const fromDateVal = $fromDate.val();
+        const toDateVal = $toDate.val();
+
+        // --- Added 'consumed=true' to the URL ---
+        const url = `/api/groceries?consumed=true&tag=${encodeURIComponent(selectedFilterTag)}&subtag=${encodeURIComponent(selectedFilterSubtag)}`;
+        if (fromDateVal) {
+            url += `&from_date=${encodeURIComponent(fromDateVal)}`;
+        }
+        if (toDateVal) {
+            url += `&to_date=${encodeURIComponent(toDateVal)}`;
+        }
         fetch(url)
             .then(response => response.json())
-            .then(filteredData => {
-                renderGallery(filteredData);
-            })
+            .then(filteredData => renderGallery(filteredData))
             .catch(error => {
-                console.error('Error fetching filtered grocery data:', error);
                 $('#galleryContainer').html('<p class="text-center text-danger">Failed to load items.</p>');
             });
     }
     
-    // --- Render Gallery & Other Logic (No other changes needed below) ---
+    // --- Updated renderGallery function ---
     function renderGallery(items) {
         const $container = $('#galleryContainer');
         $container.empty();
         if (items.length === 0) {
-            $container.html('<p class="text-center text-muted">No items found for this sub-category.</p>');
+            $container.html('<p class="text-center text-muted">No consumed items found for this sub-category.</p>');
         }
         items.forEach(item => {
             const tagsHtml = `<span class="badge bg-secondary">${item.tags.replace(/,/g, ' / ')}</span>`;
-            const expiryHtml = item.expiry_date ? `<p class="card-text"><small class="text-muted">Expires: ${formatDate(item.expiry_date)}</small></p>` : '';
+            // Use the formatDate helper
+            const createdDate = formatDate(item.created_at);
+            const expiryDate = formatDate(item.expiry_date);
+            const consumedDate = formatDate(item.consumed_at);
+            const dateHtml = `<p class="card-text mb-0"><small class="text-muted">Consumed: ${consumedDate}</small></p>
+                              <p class="card-text"><small class="text-muted">Expired: ${expiryDate}</small></p>`;
+
             const itemHtml = `
                 <div class="col-6 col-md-4 col-lg-3" id="item-${item.id}">
                     <div class="card bg-secondary-subtle gallery-item">
@@ -142,28 +148,17 @@ $(document).ready(function() {
                         <div class="card-body p-2">
                             <h6 class="card-title">${item.name || 'Unnamed Item'}</h6>
                             ${tagsHtml}
-                            ${expiryHtml}
+                            ${dateHtml}
                         </div>
-                        <input type="checkbox" class="form-check-input consume-checkbox" data-id="${item.id}" title="Mark as consumed">
-                    </div>
+                        </div>
                 </div>`;
             $container.append(itemHtml);
         });
     }
-    $('#galleryContainer').on('change', '.consume-checkbox', function() {
-        const itemId = $(this).data('id');
-        if (confirm('Mark this item as fully consumed? It will be removed from the gallery.')) {
-            fetch(`/api/grocery/consume/${itemId}`, { method: 'POST' })
-                .then(res => res.json())
-                .then(data => { if (data.success) $(`#item-${itemId}`).fadeOut(500, function() { $(this).remove(); }); });
-        } else {
-            $(this).prop('checked', false);
-        }
-    });
+
     $('#galleryContainer').on('click', '.gallery-image', function() {
         const src = $(this).attr('src');
         $('#fullscreenImage').attr('src', src);
         imageModal.show();
     });
-    
 });

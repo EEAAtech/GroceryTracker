@@ -54,11 +54,11 @@ $(document).ready(function() {
 
         //Render the subtag buttons
         tagObject.subtags.forEach(subtag => {
-            $button = $('<button></button>')
+            const $buttontgs = $('<button></button>')
                 .addClass('btn btn-outline-light')
                 .text(subtag)
                 .data('subtag', subtag);
-            $subtagsContainer.append($button);
+            $subtagsContainer.append($buttontgs);
         });
 
        

@@ -45,7 +45,8 @@ def init_db():
                 expiry_date DATE,
                 image_base64 NVARCHAR(MAX) NOT NULL,
                 consumed BIT DEFAULT 0,
-                created_at DATETIME DEFAULT GETDATE()
+                created_at DATETIME DEFAULT GETDATE(),
+                consumed_at DATE
             )
             """
             cursor.execute(table_check_sql)
@@ -71,6 +72,31 @@ def query_db(query, params=(), fetchall=False):
             conn.commit()
             return cursor.rowcount
 
+
+
+# --- NEW: Helper function to parse date strings like "7d", "3w", "1m" ---
+def parse_relative_date(relative_str):
+    if not relative_str or not isinstance(relative_str, str) or len(relative_str) < 2:
+        return None
+    
+    today = date.today()
+    unit = relative_str[-1].lower()
+    try:
+        value = int(relative_str[:-1])
+    except ValueError:
+        return None
+
+    if unit == 'd':
+        return today - timedelta(days=value)
+    elif unit == 'w':
+        return today - timedelta(weeks=value)
+    elif unit == 'm':
+        # Approximate a month as 30 days for simplicity
+        return today - timedelta(days=value * 30)
+    else:
+        return None
+
+
 @app.route('/api/groceries', methods=['GET'])
 def get_groceries():
     """
@@ -80,26 +106,48 @@ def get_groceries():
     tag = request.args.get('tag')
     subtag = request.args.get('subtag')
 
+    # Check for the 'consumed' parameter, default to 'false'
+    show_consumed = request.args.get('consumed', 'false').lower() == 'true'
+
+    # date filters
+    from_date_str = request.args.get('from_date')
+    to_date_str = request.args.get('to_date')
+
     # If no specific filter is provided, return an empty list as requested.
     if not tag or not subtag:
         return jsonify([])
 
     # A filter is provided, so build the query.
     try:
-        # The 'tags' column stores data like "Fruit,Apple"
-        tags_filter = f"{tag},{subtag}"
-
-        # SQL to get unconsumed items for a specific tag set,
-        # ordered with NULL expiry dates first, then by the nearest expiry date.
-        sql = """
-            SELECT * FROM groceries 
-            WHERE consumed = 0 AND tags = ?
-            ORDER BY expiry_date ASC
-        """
+        params = []
+        sql = "SELECT * FROM groceries WHERE "
         
+       # Filter by consumed status
+        consumed_status = 1 if show_consumed else 0
+        sql += "consumed = ? "
+        params.append(consumed_status)
+
+        # Filter by tags
+        tags_filter = f"{tag},{subtag}"
+        sql += "AND tags = ? "
+        params.append(tags_filter)
+
+        # Filter by date range for consumed items
+        if show_consumed:
+            start_date = parse_relative_date(from_date_str)
+            end_date = parse_relative_date(to_date_str) if to_date_str else date.today()
+            
+            if start_date:
+                # Adjust end_date to be inclusive of the whole day
+                end_date_inclusive = datetime.combine(end_date, datetime.max.time())
+                sql += "AND consumed_at BETWEEN ? AND ? "
+                params.extend([start_date, end_date_inclusive])
+
+        sql += " ORDER BY expiry_date ASC"
+       
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(sql, (tags_filter,))
+            cursor.execute(sql, tuple(params))
             columns = [column[0] for column in cursor.description]
             items = [dict(zip(columns, row)) for row in cursor.fetchall()]
             return jsonify(items)
@@ -125,7 +173,7 @@ def add_grocery():
 
 @app.route('/api/grocery/consume/<int:item_id>', methods=['POST'])
 def consume_grocery(item_id):
-    sql = "UPDATE groceries SET consumed = 1 WHERE id = ?"
+    sql = "UPDATE groceries SET consumed = 1, consumed_at=GETDATE() WHERE id = ?"
     changes = query_db(sql, (item_id,))
     return jsonify({"success": True, "changes": changes})
 
