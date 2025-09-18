@@ -7,7 +7,7 @@ $(document).ready(function() {
 
     const $tagsContainer = $('#tagsContainer');
     const $subtagsContainer = $('#subtagsContainer');
-    // REMOVED: The $subtagsHeader variable is no longer needed.
+    
 
     // 1. Load Tag/Subtag data from JSON
     $.ajax({
@@ -38,17 +38,23 @@ $(document).ready(function() {
         });
     }
 
-    // --- UPDATED renderSubtags function ---
+    
     function renderSubtags(tagName) {
         const tagObject = tagsData.find(t => t.tag === tagName);
         if (!tagObject) return;
 
         $subtagsContainer.empty(); // Clear previous content
 
-    
+        const $button = $('<button></button>') //Create a tag btn
+                .addClass('btn btn-secondary')
+                .text(tagName)
+                .attr('id', 'backToTagsBtn');    
+            $subtagsContainer.append($button);
+
+
         //Render the subtag buttons
         tagObject.subtags.forEach(subtag => {
-            const $button = $('<button></button>')
+            $button = $('<button></button>')
                 .addClass('btn btn-outline-light')
                 .text(subtag)
                 .data('subtag', subtag);
@@ -65,11 +71,10 @@ $(document).ready(function() {
         selectedTag = $(this).data('tag');
         selectedSubtag = null; // Reset subtag selection
 
-        // UPDATED: No longer need to manage the header separately
         renderSubtags(selectedTag);
         $(this).addClass('active').siblings().removeClass('active');
-    
-        $subtagsContainer.show();
+        $tagsContainer.addClass('hidden');
+        $subtagsContainer.removeClass('hidden');
     });
 
     // Click on a subtag (single selection)
@@ -77,6 +82,17 @@ $(document).ready(function() {
         selectedSubtag = $(this).data('subtag');
         $(this).addClass('active').siblings().removeClass('active');
     });
+
+    // Use a "delegated" event handler for the dynamically created back button
+    $subtagsContainer.on('click', '#backToTagsBtn', function() {
+        selectedTag = null;
+        selectedSubtag = null;
+        
+        $subtagsContainer.addClass('hidden').empty();
+        $tagsContainer.removeClass('hidden');
+        $tagsContainer.find('.btn').removeClass('active');
+    });
+
 
     // Quantity buttons
     $('#btnIncrease').on('click', function() {

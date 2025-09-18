@@ -5,3 +5,7 @@
 #tagsContainer .btn {
     margin-bottom: 5px;
 }
+
+.hidden {
+    display: none !important;
+}

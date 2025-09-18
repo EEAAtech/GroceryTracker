@@ -41,8 +41,14 @@ $(document).ready(function() {
 
         $filterSubtagsContainer.empty();
         
+        const $button = $('<button></button>') //Create a tag btn
+                .addClass('btn btn-secondary')
+                .text(tagName)
+                .attr('id', 'backToTagsBtn');    
+            $filterSubtagsContainer.append($button);
+
         tagObject.subtags.forEach(subtag => {
-            const $button = $('<button></button>')
+            $button = $('<button></button>')
                 .addClass('btn btn-sm btn-outline-light')
                 .text(subtag)
                 .data('subtag', subtag);
@@ -51,6 +57,9 @@ $(document).ready(function() {
         
     }
 
+
+    // --- Event Handlers ---
+
     // --- Filter Event Handlers ---
     $filterTagsContainer.on('click', '.btn', function() {
         selectedFilterSubtag = null;
@@ -58,7 +67,8 @@ $(document).ready(function() {
         $(this).addClass('active').siblings().removeClass('active');
         
         renderFilterSubtags(selectedFilterTag);
-        $filterSubtagsContainer.show();
+        $filterTagsContainer.addClass('hidden');
+        $filterSubtagsContainer.removeClass('hidden');
         applyFilters();
     });
 
@@ -68,7 +78,16 @@ $(document).ready(function() {
         applyFilters();
     });
 
-    // --- UPDATED applyFilters function ---
+    // Use a "delegated" event handler for the dynamically created back button
+    $filterSubtagsContainer.on('click', '#backToTagsBtn', function() {
+        selectedFilterTag = null;
+        selectedFilterSubtag = null;
+        
+        $filterSubtagsContainer.addClass('hidden').empty();
+        $filterTagsContainer.removeClass('hidden');
+        $filterTagsContainer.find('.btn').removeClass('active');
+    });
+
     function applyFilters() {
         // Only fetch data if a specific subtag has been selected.
         if (!selectedFilterTag || !selectedFilterSubtag) {
