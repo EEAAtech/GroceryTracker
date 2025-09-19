@@ -6,6 +6,9 @@ $(document).ready(function() {
     const imageModal = new bootstrap.Modal($('#imageModal')[0]);
     const $filterTagsContainer = $('#filterTagsContainer');
     const $filterSubtagsContainer = $('#filterSubtagsContainer');
+     // --- Selectors for date inputs ---
+    const $fromDate = $('#fromDate');
+    const $toDate = $('#toDate');
 
     // Helper function to format dates
     function formatDate(dateString) {
@@ -110,7 +113,7 @@ $(document).ready(function() {
         const toDateVal = $toDate.val();
 
         // --- Added 'consumed=true' to the URL ---
-        const url = `/api/groceries?consumed=true&tag=${encodeURIComponent(selectedFilterTag)}&subtag=${encodeURIComponent(selectedFilterSubtag)}`;
+        var url = `/api/groceries?consumed=true&tag=${encodeURIComponent(selectedFilterTag)}&subtag=${encodeURIComponent(selectedFilterSubtag)}`;
         if (fromDateVal) {
             url += `&from_date=${encodeURIComponent(fromDateVal)}`;
         }
