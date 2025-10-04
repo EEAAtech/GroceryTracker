@@ -186,7 +186,7 @@ $(document).ready(function() {
         }
         try {
             await Promise.all(savePromises);
-            //alert(`Successfully saved ${quantity} item(s)!`);
+            alert(`Successfully saved ${quantity} item(s)!`);
             window.location.reload();
         } catch (error) {
             console.error('Error:', error);
