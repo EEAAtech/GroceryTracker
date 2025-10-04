@@ -177,7 +177,7 @@ $(document).ready(function() {
         };
         const savePromises = [];
         for (let i = 0; i < quantity; i++) {
-            const savePromise = fetch('/api/grocery', {
+            const savePromise = fetch('https://grocery-track-api-ea-fvh3amgzd6f7fjdw.centralindia-01.azurewebsites.net/api/grocery', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(groceryItem),
