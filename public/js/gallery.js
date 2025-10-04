@@ -120,7 +120,7 @@ $(document).ready(function() {
                 renderGallery(filteredData);
             })
             .catch(error => {
-                console.error('Error fetching groceries items from api:', error);
+                console.error('Error fetching groceries items from API:', error);
                 $('#galleryContainer').html('<p class="text-center text-danger">Failed to load items.</p>');
             });
     }
