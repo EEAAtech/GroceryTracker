@@ -112,7 +112,7 @@ $(document).ready(function() {
         // Show a loading indicator
         $('#galleryContainer').html('<p class="text-center">Loading items...</p>');
 
-        const url = `https://grocery-track-api-ea-fvh3amgzd6f7fjdw.centralindia-01.azurewebsites.net/api/groceries?tag=${encodeURIComponent(selectedFilterTag)}&subtag=${encodeURIComponent(selectedFilterSubtag)}`;
+        const url = `/api/groceries?tag=${encodeURIComponent(selectedFilterTag)}&subtag=${encodeURIComponent(selectedFilterSubtag)}`;
         
         fetch(url)
             .then(response => response.json())
@@ -153,7 +153,7 @@ $(document).ready(function() {
     $('#galleryContainer').on('change', '.consume-checkbox', function() {
         const itemId = $(this).data('id');
         if (confirm('Mark this item as fully consumed? It will be removed from the gallery.')) {
-            fetch(`https://grocery-track-api-ea-fvh3amgzd6f7fjdw.centralindia-01.azurewebsites.net/api/grocery/consume/${itemId}`, { method: 'POST' })
+            fetch(`/api/grocery/consume/${itemId}`, { method: 'POST' })
                 .then(res => res.json())
                 .then(data => { if (data.success) $(`#item-${itemId}`).fadeOut(500, function() { $(this).remove(); }); });
         } else {

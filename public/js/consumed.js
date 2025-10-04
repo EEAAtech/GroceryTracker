@@ -113,7 +113,7 @@ $(document).ready(function() {
         const toDateVal = $toDate.val();
 
         // --- Added 'consumed=true' to the URL ---
-        var url = `https://grocery-track-api-ea-fvh3amgzd6f7fjdw.centralindia-01.azurewebsites.net/api/groceries?consumed=true&tag=${encodeURIComponent(selectedFilterTag)}&subtag=${encodeURIComponent(selectedFilterSubtag)}`;
+        var url = `/api/groceries?consumed=true&tag=${encodeURIComponent(selectedFilterTag)}&subtag=${encodeURIComponent(selectedFilterSubtag)}`;
         if (fromDateVal) {
             url += `&from_date=${encodeURIComponent(fromDateVal)}`;
         }
