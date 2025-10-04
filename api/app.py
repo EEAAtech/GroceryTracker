@@ -22,9 +22,6 @@ def get_db_connection():
         print(f"Database connection failed: {ex}")
         raise
 
-def dict_factory(cursor, row):
-    fields = [column[0] for column in cursor.description]
-    return {key: value for key, value in zip(fields, row)}
 
 def parse_relative_date(relative_str):
     if not relative_str or not isinstance(relative_str, str) or len(relative_str) < 2:
@@ -104,12 +101,16 @@ def get_groceries():
 @app.route('/api/grocery', methods=['POST'])
 def add_grocery():
     data = request.get_json()
-    sql = "INSERT INTO groceries (name, tags, expiry_date, image_base_64) VALUES (?, ?, ?, ?)"
+    sql = "INSERT INTO groceries (name, tags, expiry_date, image_base64) VALUES (?, ?, ?, ?)"
     params = (data.get('name'), data.get('tags'), data.get('expiry_date'), data.get('image_base64'))
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(sql, params)
-    return jsonify({"success": True}), 201
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, params)
+        return jsonify({"success": True}), 201
+    except Exception as e:
+        print(f"ERROR in add_grocery: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/grocery/consume/<int:item_id>', methods=['POST'])
 def consume_grocery(item_id):

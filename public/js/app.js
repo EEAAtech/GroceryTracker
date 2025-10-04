@@ -181,6 +181,13 @@ $(document).ready(function() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(groceryItem),
+            }).then(response => {
+                // Check if the response was successful (status 200-299)
+                if (!response.ok) {
+                    // If not, throw an error to be caught by the .catch block
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+                return response.json();
             });
             savePromises.push(savePromise);
         }
