@@ -109,18 +109,30 @@ $(document).ready(function() {
             return;
         }
 
-        // Show a loading indicator
         $('#galleryContainer').html('<p class="text-center">Loading items...</p>');
 
         const url = `/api/groceries?tag=${encodeURIComponent(selectedFilterTag)}&subtag=${encodeURIComponent(selectedFilterSubtag)}`;
         
+        // --- THIS IS THE FIX ---
+        // Make the fetch call more robust to handle empty responses
         fetch(url)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                // Check if the response has content before trying to parse it as JSON
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return response.json();
+                } else {
+                    return []; // If not JSON, return an empty array to avoid parsing errors
+                }
+            })
             .then(filteredData => {
                 renderGallery(filteredData);
             })
             .catch(error => {
-                console.error('Error fetching groceries items from API:', error);
+                console.error('Error fetching filtered grocery data:', error);
                 $('#galleryContainer').html('<p class="text-center text-danger">Failed to load items.</p>');
             });
     }

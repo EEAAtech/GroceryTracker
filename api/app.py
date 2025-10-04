@@ -43,41 +43,60 @@ def parse_relative_date(relative_str):
 # --- API Routes (No changes to the routes themselves) ---
 @app.route('/api/groceries', methods=['GET'])
 def get_groceries():
+    """
+    Get grocery items. If tag and subtag are provided as query params,
+    it returns filtered and sorted data. Otherwise, returns an empty list.
+    """
     tag = request.args.get('tag')
     subtag = request.args.get('subtag')
+
+    # Check for the 'consumed' parameter, default to 'false'
     show_consumed = request.args.get('consumed', 'false').lower() == 'true'
+
+    # date filters
     from_date_str = request.args.get('from_date')
     to_date_str = request.args.get('to_date')
 
+    # If no specific filter is provided, return an empty list as requested.
     if not tag or not subtag:
         return jsonify([])
 
+    # A filter is provided, so build the query.
     try:
         params = []
         sql = "SELECT * FROM groceries WHERE "
+        
+       # Filter by consumed status
         consumed_status = 1 if show_consumed else 0
         sql += "consumed = ? "
         params.append(consumed_status)
+
+        # Filter by tags
         tags_filter = f"{tag},{subtag}"
         sql += "AND tags = ? "
         params.append(tags_filter)
 
+        # Filter by date range for consumed items
         if show_consumed:
             start_date = parse_relative_date(from_date_str)
             end_date = parse_relative_date(to_date_str) if to_date_str else date.today()
+            
             if start_date:
+                # Adjust end_date to be inclusive of the whole day
                 end_date_inclusive = datetime.combine(end_date, datetime.max.time())
                 sql += "AND consumed_at BETWEEN ? AND ? "
                 params.extend([start_date, end_date_inclusive])
-        
-        order_by_clause = "ORDER BY consumed_at DESC" if show_consumed else "ORDER BY expiry_date IS NULL DESC, expiry_date ASC"
-        sql += order_by_clause
-        
+
+        sql += " ORDER BY expiry_date ASC"
+       
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql, tuple(params))
-            items = [dict_factory(cursor, row) for row in cursor.fetchall()]
+            columns = [column[0] for column in cursor.description]
+            items = [dict(zip(columns, row)) for row in cursor.fetchall()]
             return jsonify(items)
+
+            
     except Exception as e:
         print(f"Error fetching filtered groceries: {e}")
         return jsonify({"error": str(e)}), 500
