@@ -1,14 +1,18 @@
 [
   {
+    "tag": "Ready",
+    "subtags": ["NonVeg", "Veg", "DalCurry", "Starch","Soup","Pickle", "Sweet", "Jam", "Fruit", "DryFrt",  "Snack", "Drink"]
+  },
+  {
+    "tag": "Quick",
+    "subtags": ["NonVeg", "Veg", "DalCury","Starch","Soup", "Sweet", "Snack", "Drink"]
+  },
+  {
     "tag": "Raw",
     "subtags": ["NonVeg", "Veg", "DalCurry", "Starch", "Snack"]
   },
   {
-    "tag": "Ready",
-    "subtags": ["NonVeg", "Veg", "DalCurry", "Sweet", "Jam", "Pickle", "Fruit", "DryFrt", "Soup", "Starch", "Snack", "Drink"]
-  },
-  {
-    "tag": "Quick",
-    "subtags": ["NonVeg", "Veg", "DalCury", "Sweet", "Soup", "Starch", "Snack", "Drink"]
+    "tag": "Warrenty",
+    "subtags": ["Appliances", "Misc."]
   }
 ]
