@@ -193,11 +193,11 @@ $(document).ready(function() {
         }
         try {
             await Promise.all(savePromises);
-            alert(`Successfully saved ${quantity} item(s)!`);
+            //alert(`Successfully saved ${quantity} item(s)!`);
             window.location.reload();
         } catch (error) {
             console.error('Error:', error);
-            alert('An error occurred while saving.');
+            alert('An error occurred while saving.' + error);
             $(this).prop('disabled', false).text('Save Item');
         }
     });
